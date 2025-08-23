@@ -1,134 +1,238 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { spawn } from 'child_process';
+import { writeFileSync, readFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
-// Remember to rename these classes and interfaces!
-
-interface MyPluginSettings {
-	mySetting: string;
+interface ExternalCodeblockSettings {
+  terminalCommand: string[];
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+const DEFAULT_SETTINGS: ExternalCodeblockSettings = {
+  terminalCommand: ['/opt/homebrew/bin/alacritty', '-e', 'zsh', '-c', 'nvim']
 }
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
-
-	async onload() {
-		await this.loadSettings();
-
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-	}
-
-	onunload() {
-
-	}
-
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
+interface CodeblockInfo {
+  content: string;
+  startLine: number;
+  endLine: number;
+  language: string;
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
+export default class ExternalCodeblockPlugin extends Plugin {
+  settings: ExternalCodeblockSettings;
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
+  async onload() {
+    await this.loadSettings();
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
+    this.addCommand({
+      id: 'edit-codeblock-externally',
+      name: 'Edit codeblock in external editor',
+      editorCallback: (editor: Editor, view: MarkdownView) => {
+        this.editCodeblockExternally(editor);
+      }
+    });
+
+    this.addSettingTab(new ExternalCodeblockSettingTab(this.app, this));
+  }
+
+  private findCodeblockAtCursor(editor: Editor): CodeblockInfo | null {
+    const cursor = editor.getCursor();
+    const content = editor.getValue();
+    const lines = content.split('\n');
+
+    let startLine = -1;
+    let endLine = -1;
+    let language = '';
+
+    for (let i = cursor.line; i >= 0; i--) {
+      const line = lines[i];
+      if (line.startsWith('```')) {
+        startLine = i;
+        language = line.substring(3).trim();
+        break;
+      }
+    }
+
+    if (startLine === -1) return null;
+
+    for (let i = cursor.line + 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith('```') && line.trim() === '```') {
+        endLine = i;
+        break;
+      }
+    }
+
+    if (endLine === -1) return null;
+
+    const codeContent = lines.slice(startLine + 1, endLine).join('\n');
+
+    return {
+      content: codeContent,
+      startLine,
+      endLine,
+      language
+    };
+  }
+
+  private async editCodeblockExternally(editor: Editor) {
+    const codeblock = this.findCodeblockAtCursor(editor);
+
+    if (!codeblock) {
+      new Notice('No codeblock found at cursor position');
+      return;
+    }
+
+    const tempFileName = `obsidian-codeblock-${Date.now()}.${this.getFileExtension(codeblock.language)}`;
+    const tempFilePath = join(tmpdir(), tempFileName);
+
+    try {
+      writeFileSync(tempFilePath, codeblock.content, 'utf8');
+
+      await new Promise<void>((resolve, reject) => {
+        const [command, ...args] = this.settings.terminalCommand;
+        // Modify the last argument (the editor command) to include the file path
+        const modifiedArgs = [...args];
+        const lastArgIndex = modifiedArgs.length - 1;
+        modifiedArgs[lastArgIndex] = `${modifiedArgs[lastArgIndex]} "${tempFilePath}"`;
+
+        const nvim = spawn(command, modifiedArgs, {
+          detached: true,
+          env: { ...process.env, PATH: process.env.PATH }
+        });
+
+        nvim.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`Neovim exited with code ${code}`));
+          }
+        });
+
+        nvim.on('error', (error) => {
+          reject(error);
+        });
+      });
+
+      const editedContent = readFileSync(tempFilePath, 'utf8');
+
+      const lines = editor.getValue().split('\n');
+      const newLines = [
+        ...lines.slice(0, codeblock.startLine + 1),
+        ...editedContent.split('\n'),
+        ...lines.slice(codeblock.endLine)
+      ];
+
+      editor.setValue(newLines.join('\n'));
+
+      new Notice('Codeblock updated successfully');
+
+    } catch (error) {
+      new Notice(`Error editing with external editor: ${error.message}`);
+    } finally {
+      try {
+        unlinkSync(tempFilePath);
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    }
+  }
+
+  private getFileExtension(language: string): string {
+    const extensions: { [key: string]: string } = {
+      'javascript': 'js',
+      'js': 'js',
+      'typescript': 'ts',
+      'ts': 'ts',
+      'python': 'py',
+      'py': 'py',
+      'java': 'java',
+      'cpp': 'cpp',
+      'c++': 'cpp',
+      'c': 'c',
+      'rust': 'rs',
+      'rs': 'rs',
+      'go': 'go',
+      'golang': 'go',
+      'html': 'html',
+      'css': 'css',
+      'scss': 'scss',
+      'sass': 'sass',
+      'json': 'json',
+      'yaml': 'yml',
+      'yml': 'yml',
+      'xml': 'xml',
+      'sql': 'sql',
+      'bash': 'sh',
+      'shell': 'sh',
+      'sh': 'sh',
+      'zsh': 'sh',
+      'fish': 'fish',
+      'php': 'php',
+      'ruby': 'rb',
+      'rb': 'rb',
+      'swift': 'swift',
+      'kotlin': 'kt',
+      'scala': 'scala',
+      'clojure': 'clj',
+      'haskell': 'hs',
+      'lua': 'lua',
+      'perl': 'pl',
+      'r': 'r',
+      'matlab': 'm',
+      'vue': 'vue',
+      'svelte': 'svelte',
+      'jsx': 'jsx',
+      'tsx': 'tsx',
+      'markdown': 'md',
+      'md': 'md'
+    };
+
+    return extensions[language.toLowerCase()] || 'txt';
+  }
+
+  onunload() {
+
+  }
+
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings() {
+    await this.saveData(this.settings);
+  }
 }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+class ExternalCodeblockSettingTab extends PluginSettingTab {
+  plugin: ExternalCodeblockPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
+  constructor(app: App, plugin: ExternalCodeblockPlugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
 
-	display(): void {
-		const {containerEl} = this;
+  display(): void {
+    const {containerEl} = this;
 
-		containerEl.empty();
+    containerEl.empty();
 
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
+    containerEl.createEl('h2', {text: 'External Codeblock Editor Settings'});
+
+    new Setting(containerEl)
+      .setName('Terminal Command')
+      .setDesc('Full terminal command as JSON array including editor (e.g., ["/path/to/alacritty", "-e", "zsh", "-c", "nvim"])')
+      .addTextArea(text => text
+        .setPlaceholder('["/opt/homebrew/bin/alacritty", "-e", "zsh", "-c", "nvim"]')
+        .setValue(JSON.stringify(this.plugin.settings.terminalCommand))
+        .onChange(async (value) => {
+          try {
+            this.plugin.settings.terminalCommand = JSON.parse(value);
+            await this.plugin.saveSettings();
+          } catch (e) {
+            // Invalid JSON, ignore
+          }
+        }));
+  }
 }

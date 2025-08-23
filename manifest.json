@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "neovim-codeblock-editor",
+	"name": "External Codeblock Editor",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
-	"isDesktopOnly": false
+	"description": "Edit codeblocks in external editor and sync changes back to Obsidian",
+	"author": "Gleb Glazov",
+	"authorUrl": "",
+	"fundingUrl": "",
+	"isDesktopOnly": true
 }
