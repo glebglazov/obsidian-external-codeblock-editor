@@ -218,8 +218,6 @@ class ExternalCodeblockSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    containerEl.createEl('h2', {text: 'External Codeblock Editor Settings'});
-
     new Setting(containerEl)
       .setName('Terminal Command')
       .setDesc('Full terminal command as JSON array including editor (e.g., ["/path/to/alacritty", "-e", "zsh", "-c", "nvim"])')
