@@ -106,7 +106,7 @@ export default class ExternalCodeblockPlugin extends Plugin {
           if (code === 0) {
             resolve();
           } else {
-            reject(new Error(`Neovim exited with code ${code}`));
+            reject(new Error(`External editor exited with code ${code}`));
           }
         });
 
