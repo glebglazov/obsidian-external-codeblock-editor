@@ -92,12 +92,23 @@ export default class ExternalCodeblockPlugin extends Plugin {
 
       await new Promise<void>((resolve, reject) => {
         const [command, ...args] = this.settings.terminalCommand;
-        // Modify the last argument (the editor command) to include the file path
-        const modifiedArgs = [...args];
-        const lastArgIndex = modifiedArgs.length - 1;
-        modifiedArgs[lastArgIndex] = `${modifiedArgs[lastArgIndex]} "${tempFilePath}"`;
 
-        const nvim = spawn(command, modifiedArgs, {
+        // Check if this looks like a shell command (contains -c flag)
+        const isShellCommand = args.includes('-c');
+
+        let finalArgs;
+        if (isShellCommand) {
+          // For shell commands, append file path to the editor command
+          const modifiedArgs = [...args];
+          const lastArgIndex = modifiedArgs.length - 1;
+          modifiedArgs[lastArgIndex] = `${modifiedArgs[lastArgIndex]} "${tempFilePath}"`;
+          finalArgs = modifiedArgs;
+        } else {
+          // For direct editor commands, just append the file path as a separate argument
+          finalArgs = [...args, tempFilePath];
+        }
+
+        const nvim = spawn(command, finalArgs, {
           detached: true,
           env: { ...process.env, PATH: process.env.PATH }
         });
