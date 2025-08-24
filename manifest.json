@@ -1,5 +1,5 @@
 {
-	"id": "neovim-codeblock-editor",
+	"id": "external-codeblock-editor",
 	"name": "External Codeblock Editor",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
