@@ -115,7 +115,7 @@ export default class ExternalCodeblockPlugin extends Plugin {
         });
       });
 
-      const editedContent = readFileSync(tempFilePath, 'utf8');
+      const editedContent = readFileSync(tempFilePath, 'utf8').replace(/\n$/, '');
 
       const lines = editor.getValue().split('\n');
       const newLines = [
