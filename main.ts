@@ -231,7 +231,7 @@ class ExternalCodeblockSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Terminal Command')
-      .setDesc('Full terminal command as JSON array including editor (e.g., ["/path/to/alacritty", "-e", "zsh", "-c", "nvim"])')
+      .setDesc('Full terminal command as JSON array including editor. See README for examples.')
       .addTextArea(text => text
         .setPlaceholder('["/opt/homebrew/bin/alacritty", "-e", "zsh", "-c", "nvim"]')
         .setValue(JSON.stringify(this.plugin.settings.terminalCommand))

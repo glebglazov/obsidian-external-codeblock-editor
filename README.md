@@ -40,30 +40,36 @@ Go to Settings → External Codeblock Editor to configure your terminal command.
 
 The terminal command should be provided as a JSON array. For example:
 
+### Common Configurations on MacOS
+
+**Alacritty + Neovim:**
 ```json
 ["/opt/homebrew/bin/alacritty", "-e", "zsh", "-c", "nvim"]
 ```
 
-### Common Configurations
-
-**Alacritty + Neovim (macOS):**
+**Ghostty + Nano:**
 ```json
-["/opt/homebrew/bin/alacritty", "-e", "zsh", "-c", "nvim"]
+["/Applications/Ghostty.app/Contents/MacOS/ghostty", "-e", "zsh", "-c", "nano"]
 ```
 
-**iTerm2 + Neovim (macOS):**
+**iTerm2 + Neovim:**
 ```json
 ["/Applications/iTerm.app/Contents/MacOS/iTerm2", "-e", "nvim"]
 ```
 
-**Windows Terminal + Neovim (Windows):**
+**Terminal + Vim:**
 ```json
-["wt", "-e", "nvim"]
+["/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal", "-e", "vim"]
 ```
 
-**VS Code:**
+**VS Code (direct, no terminal):**
 ```json
 ["code", "--wait"]
+```
+
+**Sublime Text (direct, no terminal):**
+```json
+["subl", "--wait"]
 ```
 
 ## Supported Languages
