@@ -94,6 +94,12 @@ JavaScript, TypeScript, Python, Java, C/C++, Rust, Go, HTML, CSS, SCSS, JSON, YA
 - `manifest.json` - Plugin manifest
 - `esbuild.config.mjs` - Build configuration
 
+### Script I use to test
+```Bash
+path_to_vault=<path-to-your-vault>
+npm run build && mkdir -p "$path_to_vault/.obsidian/plugins/neovim-codeblocks-editor" && cp main.js styles.css manifest.json "$path_to_vault/.obsidian/plugins/neovim-codeblocks-editor"
+```
+
 ## License
 
 MIT License - see LICENSE file for details.
