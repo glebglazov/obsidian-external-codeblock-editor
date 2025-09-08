@@ -47,9 +47,10 @@ export default class ExternalCodeblockPlugin extends Plugin {
 
     for (let i = cursor.line; i >= 0; i--) {
       const line = lines[i];
-      if (line.startsWith('```')) {
+      const codeblockMatch = line.match(/```(\w*)/);
+      if (codeblockMatch) {
         startLine = i;
-        language = line.substring(3).trim();
+        language = codeblockMatch[1] || '';
         break;
       }
     }
@@ -58,7 +59,7 @@ export default class ExternalCodeblockPlugin extends Plugin {
 
     for (let i = cursor.line + 1; i < lines.length; i++) {
       const line = lines[i];
-      if (line.startsWith('```') && line.trim() === '```') {
+      if (line.includes('```') && !line.match(/```\w/)) {
         endLine = i;
         break;
       }
