@@ -129,6 +129,8 @@ export default class ExternalCodeblockPlugin extends Plugin {
 
       const editedContent = readFileSync(tempFilePath, 'utf8').replace(/\n$/, '');
 
+      const cursor = editor.getCursor();
+      
       const lines = editor.getValue().split('\n');
       const newLines = [
         ...lines.slice(0, codeblock.startLine + 1),
@@ -137,6 +139,8 @@ export default class ExternalCodeblockPlugin extends Plugin {
       ];
 
       editor.setValue(newLines.join('\n'));
+      
+      editor.setCursor(cursor);
 
       new Notice('Codeblock updated successfully');
 
