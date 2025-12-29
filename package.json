@@ -1,6 +1,6 @@
 {
 	"name": "external-codeblock-editor",
-	"version": "1.0.7",
+	"version": "1.0.8",
 	"description": "Edit codeblocks of Markdown documents with external editors to get autocompletion, indentation, LSP capabilities of your favourite editor (Neovim, VSCode, etc).",
 	"main": "main.js",
 	"scripts": {
