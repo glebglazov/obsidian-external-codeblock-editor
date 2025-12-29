@@ -3,7 +3,7 @@
 	"name": "External Codeblock Editor",
 	"version": "1.0.7",
 	"minAppVersion": "0.15.0",
-	"description": "Edit codeblocks in external editor and sync changes back to Obsidian.",
+	"description": "Edit codeblocks of Markdown documents with external editors to get autocompletion, indentation, LSP capabilities of your favourite editor (Neovim, VSCode, etc).",
 	"author": "Gleb Glazov",
 	"authorUrl": "",
 	"fundingUrl": "",
