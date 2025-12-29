@@ -1,6 +1,6 @@
 {
 	"name": "external-codeblock-editor",
-	"version": "1.0.6",
+	"version": "1.0.7",
 	"description": "Edit codeblocks in external editor and sync changes back to Obsidian.",
 	"main": "main.js",
 	"scripts": {
