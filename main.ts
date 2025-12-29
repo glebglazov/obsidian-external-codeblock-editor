@@ -29,7 +29,9 @@ export default class ExternalCodeblockPlugin extends Plugin {
       id: 'edit-codeblock-externally',
       name: 'Edit codeblock in external editor',
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        this.editCodeblockExternally(editor);
+        this.editCodeblockExternally(editor).catch((error) => {
+          console.error('Error editing codeblock:', error);
+        });
       }
     });
 
@@ -130,7 +132,7 @@ export default class ExternalCodeblockPlugin extends Plugin {
       const editedContent = readFileSync(tempFilePath, 'utf8').replace(/\n$/, '');
 
       const cursor = editor.getCursor();
-      
+
       const lines = editor.getValue().split('\n');
       const newLines = [
         ...lines.slice(0, codeblock.startLine + 1),
@@ -139,7 +141,7 @@ export default class ExternalCodeblockPlugin extends Plugin {
       ];
 
       editor.setValue(newLines.join('\n'));
-      
+
       editor.setCursor(cursor);
 
       new Notice('Codeblock updated successfully');
@@ -235,8 +237,8 @@ class ExternalCodeblockSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName('Terminal Command')
-      .setDesc('Full terminal command as JSON array including editor. See README for examples.')
+      .setName('Terminal command')
+      .setDesc('Full terminal command as json array including editor. See readme for examples.')
       .addTextArea(text => text
         .setPlaceholder('["/opt/homebrew/bin/alacritty", "-e", "zsh", "-c", "nvim"]')
         .setValue(JSON.stringify(this.plugin.settings.terminalCommand))
