@@ -147,11 +147,12 @@ export default class ExternalCodeblockPlugin extends Plugin {
       new Notice('Codeblock updated successfully');
 
     } catch (error) {
-      new Notice(`Error editing with external editor: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      new Notice(`Error editing with external editor: ${message}`);
     } finally {
       try {
         unlinkSync(tempFilePath);
-      } catch (e) {
+      } catch {
         // Ignore cleanup errors
       }
     }
@@ -215,7 +216,7 @@ export default class ExternalCodeblockPlugin extends Plugin {
   }
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<ExternalCodeblockSettings>);
   }
 
   async saveSettings() {
@@ -238,15 +239,15 @@ class ExternalCodeblockSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Terminal command')
-      .setDesc('Full terminal command as json array including editor. See readme for examples.')
+      .setDesc('Full terminal command as JSON array including editor. See readme for examples.')
       .addTextArea(text => text
         .setPlaceholder('["/opt/homebrew/bin/alacritty", "-e", "zsh", "-c", "nvim"]')
         .setValue(JSON.stringify(this.plugin.settings.terminalCommand))
         .onChange(async (value) => {
           try {
-            this.plugin.settings.terminalCommand = JSON.parse(value);
+            this.plugin.settings.terminalCommand = JSON.parse(value) as string[];
             await this.plugin.saveSettings();
-          } catch (e) {
+          } catch {
             // Invalid JSON, ignore
           }
         }));
